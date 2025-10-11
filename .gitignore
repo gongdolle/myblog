@@ -1,6 +1,13 @@
-# .gitignore
+# env 파일
 .env
+env/.env
+.env.*
+env/.env.*
+
+# 가상환경/캐시
+venv/
 __pycache__/
-*.pyc
-.idea/
+
+# IDE
 .vscode/
+.idea/
