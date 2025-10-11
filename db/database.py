@@ -10,7 +10,7 @@ import os,sys
 #sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from env.config import settings
  
-DATABASE_URL = f"mysql+pymysql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
+DATABASE_URL = f"mysql+mysqlconnector://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
 
 engine =create_engine(DATABASE_URL,
                       poolclass=QueuePool,
