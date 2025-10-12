@@ -1,0 +1,16 @@
+fastapi>=0.111
+uvicorn[standard]>=0.35
+sqlalchemy>=2.0
+pydantic>=2.11
+pydantic-settings>=2.11
+httpx>=0.28
+python-multipart>=0.0.7
+email-validator>=2.2
+jinja2>=3.1
+orjson>=3.9
+ujson>=5.8
+watchfiles>=0.21
+websockets>=12
+typer>=0.12
+rich>=13
+mysql-connector-python>=9.0

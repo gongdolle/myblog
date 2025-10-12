@@ -8,6 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from routes import blog
 from db.database import direct_get_conn , context_get_conn
 from schemas.blog_schema import Blog,BlogData
+from utils import util
 #router create
 router = APIRouter(prefix="/blogs",tags=["blogs"])
 #jinja2 Template engin create
@@ -29,7 +30,7 @@ async def get_all_blogs(request:Request
         all_blogs = [BlogData(id = row.id,
                      title =row.title,
                      author=row.author,
-                     content=row.content[:100],
+                     content=util.truncate_text(row.content),
                      image_loc=row.image_loc,
                      modified_dt=row.modified_dt)
                     for row in result]
