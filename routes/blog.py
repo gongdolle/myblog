@@ -82,3 +82,10 @@ def get_blog_by_id(request:Request,id: int ,
         raise e
 
 
+@router.get("/new")
+def create_blog_ui(request: Request ):
+    return templates.TemplateResponse(
+        request=request,
+        name="new_blog.html",
+        context= {}
+    )
