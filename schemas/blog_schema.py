@@ -19,6 +19,6 @@ class BlogData:
     title:str
     author:str
     content:str
-    modifie_dt:datetime
+    modified_dt:datetime
     image_loc:str|None=None
     
