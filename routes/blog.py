@@ -6,7 +6,7 @@ from sqlalchemy import text ,Connection
 from sqlalchemy.exc import SQLAlchemyError
 
 from routes import blog
-from db.database import direct_get_conn , context_get_conn
+from db.database import direct_get_conn , context_get_conn 
 from schemas.blog_schema import Blog,BlogData
 from utils import util
 #router create
@@ -68,7 +68,7 @@ def get_blog_by_id(request:Request,id: int ,
                                 detail=f"this id:{id} not exist.")
         
         row=result.fetchone()
-        blog=BlogData(id=row[0],title=row[1],author=row[2],content=row[3],image_loc=row[4],modified_dt=row[5])
+        blog=BlogData(id=row[0],title=row[1],author=row[2],content=util.newline_to_br(row[3]),image_loc=row[4],modified_dt=row[5])
        
         result.close()
         return templates.TemplateResponse(
