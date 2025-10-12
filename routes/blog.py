@@ -1,4 +1,5 @@
-from fastapi import APIRouter,Request ,Depends
+from fastapi import APIRouter,Request ,Depends,status
+from fastapi.exceptions import HTTPException
 from sqlalchemy import text ,Connection
 from sqlalchemy.exc import SQLAlchemyError
 from routes import blog
@@ -39,22 +40,31 @@ async def get_all_blogs(request:Request
         if conn:
             conn.close()
             
-@router.get("show/{id}")
+@router.get("/show/{id}")
 def get_blog_by_id(request:Request,id: int ,
                    conn: Connection = Depends(context_get_conn)):
     try:
         query =f"""
             SELECT id,title, author, content, image_loc, modified_dt from blog
-            where id = {id}
+            where id = :id
         """
         stmt = text(query)
-        result=conn.execute(stmt)
-    
+        bind_stmt = stmt.bindparams(id=id)
+        
+        result=conn.execute(bind_stmt)
+        #result logic except ex)null
+        if result.rowcount==0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail=f"this id:{id} not exist.")
+        
         row=result.fetchone()
         blog=BlogData(id=row[0],title=row[1],author=row[2],content=row[3],image_loc=row[4],modifie_dt=row[5])
+       
         result.close()
-        
         return blog
+    
     except SQLAlchemyError as e :
         print(e)
         raise e
+
+
