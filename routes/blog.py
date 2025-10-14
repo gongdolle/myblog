@@ -1,4 +1,5 @@
-from fastapi import APIRouter,Request ,Depends,status
+from fastapi import APIRouter,Request ,Depends,status,Form
+from fastapi.responses import RedirectResponse
 from fastapi.exceptions import HTTPException
 from fastapi.templating import Jinja2Templates
 
@@ -89,3 +90,49 @@ def create_blog_ui(request: Request ):
         name="new_blog.html",
         context= {}
     )
+    
+@router.post("/new")
+def create_blog(request: Request,
+                title=Form(min_length=2,max_length=200),
+                author=Form(max_length=100),
+                content=Form(min_length=2,max_length=4000),
+                conn: Connection=Depends(context_get_conn)
+                ):
+    
+    try:
+        query=f"""
+            INSERT INTO blog(title,author,content,modified_dt)
+            values('{title}','{author}','{content}',now())
+        """
+        
+        conn.execute(text(query))
+        conn.commit()
+        
+        return RedirectResponse("/blogs",status_code=status.HTTP_302_FOUND)
+    
+    except SQLAlchemyError as e:
+        print(e)
+        conn.rollback()
+        
+@router.get("/modify/{id}")
+def update_blog_ui(request= Request, id: int , conn = Depends(context_get_conn)):
+    try:
+        query =f"""
+        select id , title, author, content form blog where id = :id
+        """
+        
+        stmt= text(query)
+        bind_stmt=stmt.bindparams(id=id)
+        result=conn.execute(bind_stmt)
+        
+        if result.rowcount  == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail=f"this id:{id} not exist.")
+        row = result.fetchone() 
+        blog=BlogData(id=row[0],title=row[1],author=row[2],content=row[3])
+        
+        return templates.TemplateResponse(
+            request=request,
+            name="modify_blog.html",
+            context= {"id" : blog.id ,"title":blog.title, "author" : blog.author , "content":blog.content }
+        )           
