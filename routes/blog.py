@@ -115,10 +115,10 @@ def create_blog(request: Request,
         conn.rollback()
         
 @router.get("/modify/{id}")
-def update_blog_ui(request= Request, id: int , conn = Depends(context_get_conn)):
+def update_blog_ui(request : Request, id: int , conn = Depends(context_get_conn)):
     try:
         query =f"""
-        select id , title, author, content form blog where id = :id
+        select id , title, author, content from blog where id = :id
         """
         
         stmt= text(query)
@@ -129,10 +129,45 @@ def update_blog_ui(request= Request, id: int , conn = Depends(context_get_conn))
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                                 detail=f"this id:{id} not exist.")
         row = result.fetchone() 
-        blog=BlogData(id=row[0],title=row[1],author=row[2],content=row[3])
+        blog=BlogData(id=row[0],title=row[1],author=row[2],content=(row[3]))
         
         return templates.TemplateResponse(
             request=request,
             name="modify_blog.html",
             context= {"id" : blog.id ,"title":blog.title, "author" : blog.author , "content":blog.content }
         )           
+    except SQLAlchemyError as e :
+        print( e)
+        raise e
+
+
+@router.post("/modify/{id}")
+def update_blog(requset:Request,id: int ,
+                title=Form(min_length=2,max_length=200),
+                author=Form(max_length=100),
+                content=Form(min_length=2,max_length=4000),
+                conn: Connection=Depends(context_get_conn)
+                ):
+    
+    
+    try:
+        query= f"""
+            UPDATE blog
+            SET title=:id,author=:author,content=:content
+            where id = :id
+            
+        """
+        bind_stmt=text(query).bindparams(id=id,title=title,author=author,content=content)
+        
+        result= conn.execute(bind_stmt)
+
+        if result.rowcount  == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail=f"this id:{id} not exist.") 
+            
+        conn.commit
+        
+        return RedirectResponse(f"/blogs/show/{id}",status_code=status.HTTP_302_FOUND)
+    except SQLAlchemyError as e :
+        print( e)
+        raise e
