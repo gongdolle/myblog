@@ -8,9 +8,10 @@ from db.database import direct_get_conn , context_get_conn
 from schemas.blog_schema import Blog,BlogData
 from utils import util
 
+from typing import List
 
 
-async def get_all_blogs(conn: Connection):
+def get_all_blogs(conn: Connection)-> List:
  
     try:
         query= """
@@ -38,10 +39,12 @@ async def get_all_blogs(conn: Connection):
         print (e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail="알수없는 이유로 서비스 오류발생함.")
 
+    result.close()
+    return all_blogs
             
 
 def get_blog_by_id(id: int ,
-                   conn: Connection ):
+                   conn: Connection):
     try:
         query =f"""
             SELECT id,title, author, content, image_loc, modified_dt from blog
@@ -57,13 +60,10 @@ def get_blog_by_id(id: int ,
                                 detail=f"this id:{id} not exist.")
         
         row=result.fetchone()
-        blog=BlogData(id=row[0],title=row[1],author=row[2],content=util.newline_to_br(row[3]),image_loc=row[4],modified_dt=row[5])
+        blog=BlogData(id=row[0],title=row[1],author=row[2],content=row[3],image_loc=row[4],modified_dt=row[5])
        
         result.close()
-        return templates.TemplateResponse(
-            request= request,
-            name="show_blog.html",
-            context={"blog":blog})
+        return blog
         
     
     except SQLAlchemyError as e :
@@ -73,20 +73,10 @@ def get_blog_by_id(id: int ,
     
 
 
-@router.get("/new")
-def create_blog_ui(request: Request ):
-    return templates.TemplateResponse(
-        request=request,
-        name="new_blog.html",
-        context= {}
-    )
-    
-@router.post("/new")
-def create_blog(request: Request,
-                title=Form(min_length=2,max_length=200),
-                author=Form(max_length=100),
-                content=Form(min_length=2,max_length=4000),
-                conn: Connection=Depends(context_get_conn)
+def create_blog( conn: Connection,
+                title:str,
+                author: str,
+                content: str,
                 ):
     
     try:
@@ -98,47 +88,21 @@ def create_blog(request: Request,
         conn.execute(text(query))
         conn.commit()
         
-        return RedirectResponse("/blogs",status_code=status.HTTP_302_FOUND)
     
     except SQLAlchemyError as e:
         print(e)
         conn.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail="요청데이터가 제대로 전달되지않았습니다.")
         
-@router.get("/modify/{id}")
-def update_blog_ui(request : Request, id: int , conn = Depends(context_get_conn)):
-    try:
-        query =f"""
-        select id , title, author, content from blog where id = :id
-        """
-        
-        stmt= text(query)
-        bind_stmt=stmt.bindparams(id=id)
-        result=conn.execute(bind_stmt)
-        
-        if result.rowcount  == 0:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail=f"this id:{id} not exist.")
-        row = result.fetchone() 
-        blog=BlogData(id=row[0],title=row[1],author=row[2],content=(row[3]))
-        
-        return templates.TemplateResponse(
-            request=request,
-            name="modify_blog.html",
-            context= {"id" : blog.id ,"title":blog.title, "author" : blog.author , "content":blog.content }
-        )           
-    except SQLAlchemyError as e :
-        print( e)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail="요청데이터가 제대로 전달되지않았습니다.")
-        
 
 
-@router.post("/modify/{id}")
-def update_blog(requset:Request,id: int ,
-                title=Form(min_length=2,max_length=200),
-                author=Form(max_length=100),
-                content=Form(min_length=2,max_length=4000),
-                conn: Connection=Depends(context_get_conn)
+
+def update_blog(
+                conn : Connection,
+                id: int ,
+                title:str,
+                author: str,
+                content: str,
                 ):
     
     
@@ -159,15 +123,13 @@ def update_blog(requset:Request,id: int ,
             
         conn.commit()
         
-        return RedirectResponse(f"/blogs/show/{id}",status_code=status.HTTP_302_FOUND)
     except SQLAlchemyError as e :
         print( e)
         conn.rollback()
         raise e
     
-    
-@router.post("/delete/{id}")
-def delete_blog(request: Request, id : int , conn: Connection = Depends(context_get_conn)):
+
+def delete_blog(conn: Connection ,id : int):
     try:
         query= f"""
             DELETE FROM blog
@@ -181,7 +143,7 @@ def delete_blog(request: Request, id : int , conn: Connection = Depends(context_
                                 detail=f"this id:{id} not exist.") 
             
         conn.commit()
-        return RedirectResponse("/blogs",status_code=status.HTTP_302_FOUND)
+
     except SQLAlchemyError as e :
         print( e)
         conn.rollback()

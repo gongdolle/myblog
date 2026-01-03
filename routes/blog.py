@@ -61,35 +61,14 @@ async def get_all_blogs(request:Request
 @router.get("/show/{id}")
 def get_blog_by_id(request:Request,id: int ,
                    conn: Connection = Depends(context_get_conn)):
-    try:
-        query =f"""
-            SELECT id,title, author, content, image_loc, modified_dt from blog
-            where id = :id
-        """
-        stmt = text(query)
-        bind_stmt = stmt.bindparams(id=id)
-        
-        result=conn.execute(bind_stmt)
-        #result logic except ex)null
-        if result.rowcount==0:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail=f"this id:{id} not exist.")
-        
-        row=result.fetchone()
-        blog=BlogData(id=row[0],title=row[1],author=row[2],content=util.newline_to_br(row[3]),image_loc=row[4],modified_dt=row[5])
-       
-        result.close()
-        return templates.TemplateResponse(
+    blog = blog_svc.get_blog_by_id(conn=conn,id=id)
+    blog.content = util.newline_to_br(blog.content)
+    
+    return templates.TemplateResponse(
             request= request,
             name="show_blog.html",
             context={"blog":blog})
         
-    
-    except SQLAlchemyError as e :
-        print(e)
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                            detail= "요청이 너무 많습니다")
-    
 
 
 @router.get("/new")
@@ -107,49 +86,20 @@ def create_blog(request: Request,
                 content=Form(min_length=2,max_length=4000),
                 conn: Connection=Depends(context_get_conn)
                 ):
-    
-    try:
-        query=f"""
-            INSERT INTO blog(title,author,content,modified_dt)
-            values('{title}','{author}','{content}',now())
-        """
-        
-        conn.execute(text(query))
-        conn.commit()
-        
-        return RedirectResponse("/blogs",status_code=status.HTTP_302_FOUND)
-    
-    except SQLAlchemyError as e:
-        print(e)
-        conn.rollback()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail="요청데이터가 제대로 전달되지않았습니다.")
-        
+    blog_svc.create_blog(conn,title=title, author= author, content= content)
+    return RedirectResponse ("/blogs",status_code=status.HTTP_302_FOUND)
+
+
 @router.get("/modify/{id}")
 def update_blog_ui(request : Request, id: int , conn = Depends(context_get_conn)):
-    try:
-        query =f"""
-        select id , title, author, content from blog where id = :id
-        """
-        
-        stmt= text(query)
-        bind_stmt=stmt.bindparams(id=id)
-        result=conn.execute(bind_stmt)
-        
-        if result.rowcount  == 0:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail=f"this id:{id} not exist.")
-        row = result.fetchone() 
-        blog=BlogData(id=row[0],title=row[1],author=row[2],content=(row[3]))
+        blog=blog_svc.get_blog_by_id(conn=conn,id=id)
         
         return templates.TemplateResponse(
             request=request,
             name="modify_blog.html",
-            context= {"id" : blog.id ,"title":blog.title, "author" : blog.author , "content":blog.content }
+            context= {"blog":blog}
         )           
-    except SQLAlchemyError as e :
-        print( e)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail="요청데이터가 제대로 전달되지않았습니다.")
-        
+ 
 
 
 @router.post("/modify/{id}")
@@ -160,49 +110,15 @@ def update_blog(requset:Request,id: int ,
                 conn: Connection=Depends(context_get_conn)
                 ):
     
+    blog_svc.update_blog(conn=conn,id=id ,title=title,author=author,content=content)
     
-    try:
-        query= f"""
-            UPDATE blog
-            SET title=:title,author=:author,content=:content
-            where id = :id
-            
-        """
-        bind_stmt=text(query).bindparams(id=id,title=title,author=author,content=content)
-        
-        result= conn.execute(bind_stmt)
+      
+    return RedirectResponse(f"/blogs/show/{id}",status_code=status.HTTP_302_FOUND)
 
-        if result.rowcount  == 0:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail=f"this id:{id} not exist.") 
-            
-        conn.commit()
-        
-        return RedirectResponse(f"/blogs/show/{id}",status_code=status.HTTP_302_FOUND)
-    except SQLAlchemyError as e :
-        print( e)
-        conn.rollback()
-        raise e
-    
+
     
 @router.post("/delete/{id}")
 def delete_blog(request: Request, id : int , conn: Connection = Depends(context_get_conn)):
-    try:
-        query= f"""
-            DELETE FROM blog
-            where id = :id
-        """
-        bind_stmt= text(query).bindparams(id=id)
-        result= conn.execute(bind_stmt)
-        
-        if result.rowcount  == 0:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail=f"this id:{id} not exist.") 
-            
-        conn.commit()
-        return RedirectResponse("/blogs",status_code=status.HTTP_302_FOUND)
-    except SQLAlchemyError as e :
-        print( e)
-        conn.rollback()
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,detail="요청서비스가 너무 많습니다")
-        
+    
+    blog_svc.delete_blog(conn=conn , id = id)    
+    return RedirectResponse("/blogs",status_code=status.HTTP_302_FOUND)
