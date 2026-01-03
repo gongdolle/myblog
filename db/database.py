@@ -9,6 +9,12 @@ import os,sys
 #debug path
 #sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from env.config import settings
+
+#env stlye
+#____________________________________________________
+#load_dotenv()
+#DATABASE_CONN = os.getenv()
+
  
 DATABASE_URL = f"mysql+mysqlconnector://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
 

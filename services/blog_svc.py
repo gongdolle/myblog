@@ -1,29 +1,18 @@
-from fastapi import APIRouter,Request ,Depends,status,Form
-from fastapi.responses import RedirectResponse
+from fastapi import status
 from fastapi.exceptions import HTTPException
-from fastapi.templating import Jinja2Templates
-
 from sqlalchemy import text ,Connection
 from sqlalchemy.exc import SQLAlchemyError
 
 from routes import blog
 from db.database import direct_get_conn , context_get_conn 
 from schemas.blog_schema import Blog,BlogData
-from services  import blog_svc
 from utils import util
 
-#router create
-router = APIRouter(prefix="/blogs",tags=["blogs"])
-#jinja2 Template engin create
-templates=Jinja2Templates(directory="templates")
 
-@router.get("/")
-async def get_all_blogs(request:Request
-                        ,conn : Connection = Depends(context_get_conn)
-                        ):
-    blog_svc.get_all_blogs(conn)
+
+async def get_all_blogs(conn: Connection):
+ 
     try:
-        conn= direct_get_conn()
         query= """
         SELECT id, title, author, content, image_loc, modified_dt FROM blog
         """
@@ -39,11 +28,6 @@ async def get_all_blogs(request:Request
                     for row in result]
 
         result.close()
-        return templates.TemplateResponse(
-            request= request,
-            name="index.html",
-            context={"all_blogs":all_blogs}
-        )
     
     except  SQLAlchemyError as e:
         print(e)
@@ -53,14 +37,11 @@ async def get_all_blogs(request:Request
     except Exception as e:
         print (e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail="알수없는 이유로 서비스 오류발생함.")
-    
-    finally:
-        if conn:
-            conn.close()
+
             
-@router.get("/show/{id}")
-def get_blog_by_id(request:Request,id: int ,
-                   conn: Connection = Depends(context_get_conn)):
+
+def get_blog_by_id(id: int ,
+                   conn: Connection ):
     try:
         query =f"""
             SELECT id,title, author, content, image_loc, modified_dt from blog
