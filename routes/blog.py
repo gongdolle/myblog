@@ -1,4 +1,4 @@
-from fastapi import APIRouter,Request ,Depends,status,Form
+from fastapi import APIRouter,Request ,Depends,status,Form,UploadFile,File
 from fastapi.responses import RedirectResponse
 from fastapi.exceptions import HTTPException
 from fastapi.templating import Jinja2Templates
@@ -23,7 +23,8 @@ async def get_all_blogs(request:Request
                         ):
     blog_svc.get_all_blogs(conn)
     try:
-        conn= direct_get_conn()
+        #conn= direct_get_conn()
+        
         query= """
         SELECT id, title, author, content, image_loc, modified_dt FROM blog
         """
@@ -84,9 +85,14 @@ def create_blog(request: Request,
                 title=Form(min_length=2,max_length=200),
                 author=Form(max_length=100),
                 content=Form(min_length=2,max_length=4000),
+                imagefile: UploadFile | None = File(None),
                 conn: Connection=Depends(context_get_conn)
+                
                 ):
-    blog_svc.create_blog(conn,title=title, author= author, content= content)
+    print("### imagefile:" ,imagefile)
+    print("$$$ filename:",imagefile.filename)
+    #blog_svc.create_blog(conn,title=title, author= author, content= content)
+    
     return RedirectResponse ("/blogs",status_code=status.HTTP_302_FOUND)
 
 
